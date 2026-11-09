@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>校园跑控制台</title>
+    <link rel="stylesheet" href="/panel.css" />
+    <script src="/panel.js" type="module"></script>
+  </head>
+  <body>
+    <main class="app" data-view="run">
+      <header class="header">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">$_</span>
+          <div>
+            <h1>校园跑控制台</h1>
+            <p>local / 三期操场</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <span class="connection" id="connection">正在连接</span>
+          <button class="text-button" id="shutdown" title="停止输入，关闭本项目所有后台，保留登录和已保存记录">⏻ 彻底退出</button>
+        </div>
+      </header>
+      <nav class="workspace-nav" aria-label="控制台工作区">
+        <button class="selected" id="view-run" aria-pressed="true"><kbd>1</kbd> 运行视图</button>
+        <button id="view-calibration" aria-pressed="false"><kbd>2</kbd> 跑道校准</button>
+        <button id="view-logs" aria-pressed="false"><kbd>3</kbd> 运行记录</button>
+        <span>400 m / 内圈</span>
+        <select id="layout-mode" aria-label="工作区布局">
+          <option value="standard">标准布局</option>
+          <option value="track">跑道优先</option>
+          <option value="device">平板优先</option>
+        </select>
+        <button class="text-button" id="layout-reset" aria-label="恢复标准布局">重置布局</button>
+        <select id="run-mode" aria-label="运行模式">
+          <option value="campus">校园跑</option>
+          <option value="outdoor">户外测试</option>
+        </select>
+      </nav>
+      <div id="notice" class="notice" role="status" hidden></div>
+      <div class="layout">
+        <section class="card analysis-card">
+          <div class="section-top">
+            <h2>图表</h2>
+            <span id="chart-source" class="muted">当前输入 / 预期</span>
+          </div>
+          <div id="input-charts" class="input-charts"></div>
+        </section>
+        <section class="device-card" aria-label="安卓模拟器">
+          <div class="section-top">
+            <h2>测试平板</h2>
+            <button class="text-button" id="refresh">刷新画面</button>
+          </div>
+          <div class="device-screen" id="device-screen">
+            <img id="device-image" alt="运动世界中的当前模拟器画面" draggable="false" hidden />
+            <div class="screen-message" id="screen-message">
+              <span class="phone-icon" aria-hidden="true">▯</span>
+              <p>正在读取模拟器画面</p>
+              <button class="button secondary" id="open-app">打开运动世界</button>
+              <button class="button secondary" id="open-viewer" hidden>打开平板窗口</button>
+            </div>
+          </div>
+          <div class="device-bottom">
+            <button id="back" class="back-button" disabled aria-label="模拟器返回">← 返回</button
+            ><span>支持点击、滑动和长按</span>
+          </div>
+        </section>
+        <div class="controls">
+          <section class="card parameters">
+            <div class="section-top">
+              <h2>跑步参数</h2>
+              <span class="muted">每次生成前可调整</span>
+            </div>
+            <label class="field-label" for="pace">目标配速 <span>分钟 / 公里</span></label>
+            <div class="pace-row">
+              <button class="step-button" id="pace-faster" aria-label="配速快 5 秒">−</button
+              ><input
+                id="pace-text"
+                value="4:10"
+                aria-label="目标配速，格式为分冒号秒"
+                inputmode="numeric"
+              /><button class="step-button" id="pace-slower" aria-label="配速慢 5 秒">+</button>
+            </div>
+            <input
+              type="range"
+              id="pace"
+              min="200"
+              max="300"
+              step="1"
+              value="250"
+              aria-label="目标配速滑块"
+            />
+            <div class="range-labels"><span>3′20″</span><span>5′00″</span></div>
+            <div class="two-fields">
+              <div>
+                <label class="field-label" for="cadence">参考步频 <span>步 / 分</span></label
+                ><input type="number" id="cadence" min="120" max="210" step="1" value="175" />
+              </div>
+              <div>
+                <label class="field-label" for="distance">计划距离 <span>米</span></label
+                ><input type="number" id="distance" min="1000" max="1200" step="10" value="1050" />
+              </div>
+            </div>
+            <label class="checkbox"
+              ><input type="checkbox" id="auto-cadence" checked /><span
+                >随配速填入参考步频</span
+              ></label
+            >
+            <p class="helper">步频与单步距离按速度联动，App 实际计步需在结果页核对。单次输入上限为 1.2 公里、5 分钟。</p>
+            <div class="estimate">
+              <span>预计输入时间</span><strong id="duration">4 分 22.5 秒</strong>
+            </div>
+            <p id="parameter-error" class="error" hidden></p>
+            <button class="button primary" id="generate">
+              生成路线与动作 <span aria-hidden="true">↗</span>
+            </button>
+            <button class="button secondary" id="prepare" hidden>准备公开参考数据</button>
+            <button class="button dark" id="run" disabled>准备校园跑</button>
+            <button class="button stop-live" id="stop-live" hidden>停止输入并恢复</button>
+            <p class="helper" id="run-reason">生成并检查后可继续。</p>
+          </section>
+
+          <section class="card generated-card">
+            <div class="section-top">
+              <h2 id="route-panel-title">运行视图</h2>
+              <div class="route-switch" role="group" aria-label="跑道底图">
+                <button id="route-render" class="selected" aria-pressed="true">渲染图</button>
+                <button id="route-satellite" aria-pressed="false" disabled>卫星图</button>
+              </div>
+              <span id="generation-status" class="muted">等待生成</span>
+            </div>
+            <div id="empty-preview" class="empty-preview">选好参数后，点击“生成路线与动作”。</div>
+            <div id="generated" hidden>
+              <div class="track-stage">
+                <div class="track-heading">
+                  <span id="progress-mode">计划预览</span><span id="lap-counter">内圈 400 米</span>
+                </div>
+                <p id="map-status" class="helper" role="status" hidden></p>
+                <svg
+                  id="route-chart"
+                  viewBox="0 0 360 190"
+                  role="img"
+                  aria-label="400米跑道、当前位置和本圈进度"
+                ></svg>
+                <p id="route-attribution" class="map-attribution" hidden>Esri 卫星影像 · 估算校准，仅供点位核对</p>
+                <div class="progress-line">
+                  <span id="progress-caption">等待开始</span
+                  ><strong id="progress-percent">0%</strong>
+                </div>
+                <progress id="run-progress" max="1" value="0" aria-label="计划完成进度"></progress>
+              </div>
+              <div class="preview-player" id="preview-player">
+                <button id="play-preview" class="text-button">播放预览</button
+                ><input
+                  type="range"
+                  id="preview-time"
+                  min="0"
+                  max="262.5"
+                  step="0.1"
+                  value="0"
+                  aria-label="离线预览进度"
+                /><span>×10</span>
+              </div>
+              <details class="more-data">
+                <summary>更多数据与校准</summary>
+                <div class="metrics">
+                  <div><span>计划距离</span><strong id="result-distance">—</strong></div>
+                  <div><span>设定步频</span><strong id="result-cadence">—</strong></div>
+                  <div><span>一致性检查</span><strong id="result-checks">—</strong></div>
+                </div>
+                <div class="metrics">
+                  <div><span>动作更新 / 秒</span><strong id="live-imu-hz">—</strong></div>
+                  <div><span>定位更新 / 秒</span><strong id="live-gps-hz">—</strong></div>
+                  <div><span>漏发帧数</span><strong id="live-missed">—</strong></div>
+                </div>
+                <p id="track-summary" class="helper"></p>
+                <p id="checkpoint-note" class="helper"></p>
+                <p id="comparison" class="helper"></p>
+                <svg
+                  id="calibration-map"
+                  viewBox="55 330 470 280"
+                  role="img"
+                  aria-label="跑道模型叠加在卫星影像上的位置校准"
+                ></svg>
+                <p class="helper" id="calibration-note">
+                  位置按影像估算。影像日期未知。© Esri、Vantor、Earthstar Geographics。
+                </p>
+              </details>
+            </div>
+          </section>
+
+          <section class="card workflow" id="workflow" hidden>
+            <div class="section-top">
+              <h2 id="job-title">操作进度</h2>
+              <button class="text-button danger" id="stop">停止并恢复</button>
+            </div>
+            <div id="prompt-box" class="prompt-box" hidden>
+              <p id="prompt-text"></p>
+              <div id="answer-controls" class="prompt-controls" aria-label="点选当前步骤"></div>
+            </div>
+            <p id="latest-event" class="latest-event" aria-live="polite"></p>
+            <details>
+              <summary>查看详细记录</summary>
+              <pre id="events"></pre>
+            </details>
+          </section>
+          <section class="card pending" id="pending" hidden>
+            <h2 id="pending-title">运行记录</h2>
+            <p class="helper" id="pending-help">户外测试的结果补记可选，不影响下次测试。</p>
+            <div id="pending-list"></div>
+          </section>
+          <section class="card telemetry-card" id="telemetry-card">
+            <div class="section-top">
+              <h2>输入遥测</h2>
+              <span class="muted">配速 · 距离 · 动作</span>
+            </div>
+            <div class="live-metrics">
+              <div>
+                <span>输入距离 <small>米</small></span
+                ><strong id="live-distance">0</strong>
+              </div>
+              <div><span>输入用时</span><strong id="live-time">0:00</strong></div>
+              <div>
+                <span>当前模拟配速 <small>分/公里</small></span
+                ><strong id="live-pace">—</strong>
+              </div>
+              <div>
+                <span>模拟步频 <small>步/分</small></span
+                ><strong id="live-cadence">—</strong>
+              </div>
+            </div>
+            <div class="speed-view">
+              <div class="chart-label" id="speed-label">速度计划</div>
+              <svg
+                id="speed-chart"
+                viewBox="0 0 240 75"
+                role="img"
+                aria-label="速度曲线与当前时间"
+              ></svg>
+            </div>
+          </section>
+          <section class="card session-checks" id="session-checks">
+            <div class="section-top">
+              <h2>运行检查</h2>
+              <span class="muted">当前状态</span>
+            </div>
+            <dl>
+              <dt>运动世界</dt>
+              <dd id="check-account">待检查</dd>
+              <dt>离线一致性</dt>
+              <dd id="check-model">待生成</dd>
+              <dt>当天地图</dt>
+              <dd class="warn" id="check-checkpoints">待核实</dd>
+              <dt>输入程序</dt>
+              <dd id="check-input">未开始</dd>
+              <dt>App 成绩</dt>
+              <dd>结束后核验</dd>
+            </dl>
+          </section>
+        </div>
+      </div>
+      <footer>
+        <span id="footer-mode">就绪 · 输入数据与 App 成绩分别核验</span
+        ><span>G 生成 · Space 预览 · 1–3 切换视图</span>
+      </footer>
+      <div id="toast" class="toast" role="alert" hidden></div>
+    </main>
+  </body>
+</html>

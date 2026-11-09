@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "source_kind": "synthetic",
+  "digitized_approximation": false,
+  "vertical_datum": "unverified",
+  "source": "Hand-authored synthetic altitude example for offline reproducibility; no screenshot, App recording, or person-specific observations",
+  "original_duration_s": 600,
+  "displayed_range_m": [
+    75.9,
+    82.5
+  ],
+  "samples": [
+    [
+      0,
+      79.2
+    ],
+    [
+      30,
+      80.0
+    ],
+    [
+      60,
+      81.5
+    ],
+    [
+      100,
+      80.4
+    ],
+    [
+      150,
+      77.4
+    ],
+    [
+      210,
+      78.6
+    ],
+    [
+      280,
+      82.0
+    ],
+    [
+      340,
+      79.1
+    ],
+    [
+      400,
+      76.5
+    ],
+    [
+      460,
+      78.3
+    ],
+    [
+      530,
+      81.1
+    ],
+    [
+      600,
+      79.6
+    ]
+  ]
+}
